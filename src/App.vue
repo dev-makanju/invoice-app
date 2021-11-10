@@ -1,22 +1,51 @@
 <template>
  <div>
-      <div class="app flex flex-column">
+      <div v-if="!isMobile" class="app flex flex-column">
           <Navigations/>
           <div class="app-content flex flex-column">
+            <transition name="invoice">
+                <InvoiceModal v-if="invoiceModal"/>
+            </transition>
                   <router-view />
           </div>
+      </div>
+      <div v-else class="mobile-message flex flex-column">
+           <h2>Sorry , this app is not supported on Mobile Device</h2>
+           <p>To use this app , please use a computer </p>
       </div>
  </div>
 </template>
 
-
 <script>
-
+import { mapState } from 'vuex'
 import Navigations from "./components/Navigations"
+import InvoiceModal from "./components/InvoiceModal"
 
 export default {
      components:{
-        Navigations
+        Navigations , InvoiceModal
+     },
+     data(){
+       return{
+            isMobile: null,
+       }
+     },
+     created(){
+         this.checkScreen,
+         addEventListener('resize' , this.checkScreen );
+     },
+     methods:{
+         checkScreen(){
+            const windowWidth = window.innerWidth;
+            if(windowWidth <= 750 ){
+                this.isMobile = true;
+            }else{
+                this.isMobile = false;
+            }
+         }
+     },
+     computed:{
+         ...mapState(['invoiceModal'])
      }
 }
 </script>
@@ -55,6 +84,31 @@ button,
   font-size: 12px;
   margin-right: 8px;
   color: #fff;
+}
+
+.mobile-message{
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #141625;
+    color: #fff;
+
+    p{
+      margin-top: 16px;
+      
+    }
+}
+
+//animated invoice
+.invoice-enter-active,
+.invoice-leave-active{
+    transition: .8s ease all;
+}
+
+.invoice-enter-from,
+.invoice-leave-to{  
+  transform: translateX( -700px );
 }
 
 .dark-purple {
