@@ -1,6 +1,7 @@
 <template>
-     <div @click="checkList" ref="invoiceWrap   " class="invoice-wrap flex flex-column">
+     <div @click="checkList" ref="invoiceWrap" class="invoice-wrap flex flex-column">
           <form @submit.prevent="submitForm" action="" class="invoice-content">
+              <Loading v-show="loading"/>
               <h1>New Invoice</h1>
 
               <!---bill from-->
@@ -99,7 +100,7 @@
               </div>
 
               <!--invoice-work-details--->
-              <div class="invoice-work.flex flex-column">
+              <div class="invoice-work flex flex-column">
                   <div class="payment flex">
                     <div class="input flex flex-column">
                        <label for="invoiceDate">Invoice Date</label>
@@ -139,17 +140,17 @@
                       <h3>Items List</h3>
                       <table class="item-list">
                             <tr class="table-heading flex">
-                                <th class="item-name">Item Name</th>
-                                <th class="qty">Qty</th>
-                                <th class="price">Price</th>
-                                <th class="total">Total</th>
+                              <th class="item-name">Item Name</th>
+                              <th class="qty">Qty</th>
+                              <th class="price">Price</th>
+                              <th class="total">Total</th>
                             </tr>
                             <tr class="table-items flex" v-for="(item , index) in invoiceItemList" :key="index">
-                                <td class="item-name"><input type="text" v-model="item.itemName"></td>
-                                <td class="qty"><input type="text" v-model="item.qty"></td>
-                                <td class="price"><input type="text" v-model="item.price"></td>
-                                <td class="total">${{ item.total = item.qty * item.price  }} </td>
-                                <img @click="deleteInvoiceItem(item.id)" src="@/assets/icon-delete.svg" alt="">
+                              <td class="item-name"><input type="text" v-model="item.itemName"></td>
+                              <td class="qty"><input type="text" v-model="item.qty"></td>
+                              <td class="price"><input type="text" v-model="item.price"></td>
+                              <td class="total">${{ item.total = item.qty * item.price  }} </td>
+                              <img @click="deleteInvoiceItem(item.id)" src="@/assets/icon-delete.svg" alt="">
                             </tr>
                       </table>
                       <div @click="addNewInvoiceItems" class="flex button">
@@ -162,11 +163,11 @@
               <!-- Save/Exit -->
               <div class="save flex">
                     <div class="left">
-                         <button @click="closeInvoice" class="red">Cancel</button>
+                         <button type="button" @click="closeInvoice" class="red">Cancel</button>
                     </div>
                     <div class="right flex">
-                        <button @click="saveDraft" class="dark-purple">Save Draft</button>
-                        <button @click="saveDraft" class="purple">Create Invoice</button>
+                        <button type="submit" @click="saveDraft" class="dark-purple">Save Draft</button>
+                        <button type="submit" @click="createInvoice" class="purple">Create Invoice</button>
                     </div>
               </div>
           </form>
@@ -174,12 +175,20 @@
 </template>
 
 <script>
- import { mapMutations } from 'vuex'
+
+import { mapMutations } from 'vuex'
+import { uid } from 'uid'
+import Loading from "../components/Loading"
 
     export default {
         name:'invoiceModal',
+        component:{
+            Loading
+        },
         data(){
             return{
+                dateOptions: { year:'numeric' , month:'short' , day:'numeric' },
+                loading: null,
                 billerStreetAddress: null,
                 billerCity: null,
                 billerZipCode: null,
@@ -202,13 +211,97 @@
                 invoiceTotal: 0 ,
             }
         },
+        created(){
+             //get current date for invoice feild
+             this.invoiceDateUnix = Date.now();
+             this.invoiceDate = new Date(this.invoiceDateUnix).toLocaleDateString('en-us' , this.dateOptions)
+        },
         methods:{
-           ...mapMutations([ 'togleInvoice' ]),
+           ...mapMutations([ 'togleInvoice' , "TOGGLE_MODAL"]),
+           checkList(e){
+               if(e.target === this.$refs.invoiceWrap){
+                  this.TOGGLE_MODAL();
+               }
+           },
            closeInvoice(){
                this.togleInvoice()
+           },
+           addNewInvoiceItems(){
+               this.invoiceItemList.push({
+                   id:uid(),
+                   itemName: "",
+                   qty: "",
+                   price: 0,
+                   total: 0
+               }); 
+           },
+           deleteInvoiceItem(id){
+              const _invoiceItemList = this.invoiceItemList;
+              this.invoiceItemList = _invoiceItemList.filter((item) => item.id !== id );
+           },
+           publishInvoice(){
+              this.invoicePending = true;  
+           },
+           saveDraft(){
+              this.invoiceDraft = true
+           },
+           calInvoiceTotal(){
+              this.invoiceTotal = 0
+              this.invoiceItemList.forEach( (item) => {
+                   this.invoiceTotal += item.total
+              }); 
+           },
+           async uploadInvoice(){
+              if(this.invoiceItemList.length <= 0 ){
+                  alert('Please ensure you fill out the form')
+                  return;
+              }
+
+              this.loading = true;
+
+              this.calInvoiceTotal()
+
+              const dataBase = ///;
+
+              await dataBase.set({
+                  invoiceId: uid(6),
+                  billerStreetAddress: this.billerStreetAddress,
+                  billerCity: this.billerStreet,
+                  billerZipCode: this.billerZipCode,
+                  billerCountry: this.billerCountry,
+                  clientName: this.clientName,
+                  clientEmail: this.clientEmail,
+                  clientStreetAddress: this.clientStreetAddress,
+                  clientCity: this.clientCity, 
+                  clientZipCode: this.clientZipCode,
+                  clientCountry: this.clientCountry,
+                  invoiceDateUnix: this.invoiceDateUnix,
+                  invoiceDate: this.invoiceDate,
+                  paymentTerms: this.paymentTerms,
+                  paymentDueDate: this.paymentDueDate,
+                  paymentDueDateUnix: this.paymentDueDateUnix,
+                  productDescription: this.productDescription,
+                  invoiceItemList: this.invoiceItemList,
+                  invoiceTotal: this.invoiceTotal,
+                  invoiceDraft: this.invoiceDraft,
+                  invoicePending: this.invoicePending,
+                  invoicepaid: null,
+              })
+              
+              this.loading = false;
+              this.togleInvoice();
+           },
+           submitForm(){
+              this.uploadInvoice();  
+           }
+        },
+        watch:{
+           paymentTerms(){
+              const futureDate = new Date()
+              this.paymentDueDateUnix = futureDate.setDate( futureDate.getDate() + parseInt(this.paymentTerms) )
+              this.paymentDueDate = new Date(this.paymentDueDateUnix).toLocaleDateString('en-us' , this.dateOptions)
            }
         }
-
     }
 </script>
 
@@ -306,9 +399,10 @@
 
           .table-heading {
             margin-bottom: 16px;
+            width:  100% ;
 
             th {
-              text-align: left;
+              text-align: left ;
             }
           }
 
@@ -322,6 +416,7 @@
               right: 0;
               width: 12px;
               height: 16px;
+              cursor: pointer;
             }
           }
         }
@@ -355,11 +450,12 @@
 
   .input {
     margin-bottom: 24px;
+    margin: 4px;
   }
 
   label {
-    font-size: 12px;
     margin-bottom: 6px;
+    font-size: 12px;
   }
 
   input,
